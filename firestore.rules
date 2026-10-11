@@ -43,7 +43,11 @@ service cloud.firestore {
       allow write: if false;
     }
     match /announcements/{msgId} {
-      allow read: if isSignedIn();
+      allow get: if isSignedIn() ||
+        (resource.data.targets is list && 'GUEST' in resource.data.targets);
+      // List predicates must be provable from the client's array-contains query.
+      // hasAny is list-only and fails closed for missing/malformed targets.
+      allow list: if isSignedIn() || resource.data.targets.hasAny(['GUEST']);
       // Allow creation if user is OGL or SM (for help requests)
       allow create: if isSignedIn() && 
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['OGL', 'SM', 'ADMIN'];

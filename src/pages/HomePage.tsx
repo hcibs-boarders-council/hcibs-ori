@@ -33,15 +33,17 @@ export const HomePage: FC = () => {
   const theme = useTheme();
   const { currentUser } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [announcementsLoading, setAnnouncementsLoading] = useState(true);
+  const [announcementsError, setAnnouncementsError] = useState(false);
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
-    if (!currentUser) {
-      setAnnouncements([]);
-      setPage(1);
-      return;
-    }
+    let active = true;
+    setAnnouncementsLoading(true);
+    setAnnouncementsError(false);
+    setAnnouncements([]);
+    setPage(1);
     // Fetch ALL guest announcements without server-side ordering to prevent index bugs
     const q = query(
       collection(db, "announcements"),
@@ -49,6 +51,7 @@ export const HomePage: FC = () => {
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!active) return;
       const docs = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -62,9 +65,23 @@ export const HomePage: FC = () => {
       });
 
       setAnnouncements(docs);
+      setPage((selectedPage) =>
+        Math.min(selectedPage, Math.max(1, Math.ceil(docs.length / ITEMS_PER_PAGE)))
+      );
+      setAnnouncementsLoading(false);
+      setAnnouncementsError(false);
+    }, () => {
+      if (!active) return;
+      setAnnouncements([]);
+      setPage(1);
+      setAnnouncementsLoading(false);
+      setAnnouncementsError(true);
     });
-    return () => unsubscribe();
-  }, [currentUser]);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [currentUser?.uid]);
 
   const handlePageChange = (
     _event: React.ChangeEvent<unknown>,
@@ -444,8 +461,8 @@ export const HomePage: FC = () => {
         </Container>
       </Box>
 
-      {/* Announcements require a signed-in account under the existing rules. */}
-      {currentUser && <Box sx={{ py: 8, bgcolor: "#fff8e1" }}>
+      {/* Only GUEST-targeted announcements are shown in this public feed. */}
+      <Box sx={{ py: 8, bgcolor: "#fff8e1" }}>
         <Container maxWidth="md">
           <Typography
             variant="h4"
@@ -464,7 +481,13 @@ export const HomePage: FC = () => {
             <CampaignIcon fontSize="large" /> Latest Updates
           </Typography>
 
-          {announcements.length === 0 ? (
+          {announcementsLoading ? (
+            <Typography role="status" align="center" color="text.secondary">
+              Loading announcements…
+            </Typography>
+          ) : announcementsError ? (
+            <Alert severity="error">Unable to load announcements. Please try again later.</Alert>
+          ) : announcements.length === 0 ? (
             <Typography
               align="center"
               color="text.secondary"
@@ -489,6 +512,7 @@ export const HomePage: FC = () => {
                         "& .MuiAlert-message": { width: "100%" },
                         boxShadow: 1,
                         bgcolor: "#ffffff",
+                        overflowWrap: "anywhere",
                       }}
                     >
                       <Typography
@@ -519,6 +543,10 @@ export const HomePage: FC = () => {
                     onChange={handlePageChange}
                     size="large"
                     sx={{
+                      "& .MuiPaginationItem-root": {
+                        minWidth: 44,
+                        height: 44,
+                      },
                       "& .MuiPaginationItem-root.Mui-selected": {
                         bgcolor: "warning.main",
                         color: "warning.contrastText",
@@ -534,8 +562,6 @@ export const HomePage: FC = () => {
           )}
         </Container>
       </Box>
-
-      }
 
       {/* --- SECTION 4: RESOURCES --- */}
       <Box sx={{ py: 8, textAlign: "center" }}>
