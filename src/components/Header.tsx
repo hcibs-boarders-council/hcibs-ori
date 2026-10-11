@@ -79,6 +79,13 @@ const Header: React.FC = () => {
   const lastAnnounceIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!currentUser || !profile) {
+      setNotifyOpen(false);
+      setNotifyMessage("");
+      setLastAnnounceId(null);
+      lastAnnounceIdRef.current = null;
+      return;
+    }
     // Listen to recent announcements and show the first relevant one
     const q = query(
       collection(db, "announcements"),
@@ -126,9 +133,9 @@ const Header: React.FC = () => {
       }
     });
     return () => unsub();
-  }, [profile, loadTime]);
+  }, [currentUser, profile, loadTime]);
 
-  const handleLoginOpen = () => setLoginOpen(true);
+  const handleLoginOpen = () => { setMobileOpen(false); setLoginOpen(true); };
   const handleLoginClose = () => setLoginOpen(false);
   const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 

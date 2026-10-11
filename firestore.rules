@@ -20,8 +20,10 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isSignedIn();
       
-      // FIX: Allow users to update THEIR OWN profile (e.g. saving fcmToken)
-      allow update: if request.auth.uid == userId;
+      // Clients manage only their own push token; trusted Functions own profile/role edits.
+      allow update: if isSignedIn() && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken'])
+        && (!('fcmToken' in request.resource.data) || request.resource.data.fcmToken is string);
       
       // Still block creation/deletion (Admin functions handle that)
       allow create, delete: if false; 
@@ -54,7 +56,9 @@ service cloud.firestore {
       allow read: if isAdmin() || (isSignedIn() && resource.data.sentByUid == request.auth.uid);
       allow update, delete: if isAdmin();
       // OGL/SM (and Admin) can create
-      allow create: if isSignedIn() && userRole() in ['OGL', 'SM', 'ADMIN'];
+      allow create: if isSignedIn() && userRole() in ['OGL', 'SM', 'ADMIN']
+        && request.resource.data.sentByUid == request.auth.uid
+        && request.resource.data.senderRole == userRole();
     }
     match /scoreLog/{logId} {
       allow read: if isSignedIn();

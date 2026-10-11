@@ -1,12 +1,19 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
-import { getFunctions } from "firebase/functions";
-import { getStorage } from "@firebase/storage";
+import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
+import { getAuth, connectAuthEmulator } from "firebase/auth";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+import { getStorage, connectStorageEmulator } from "@firebase/storage";
 
 // read keys from the .env.local
 // * DO NOT EXPOSE ACTUAL KEYS
-const firebaseConfig = {
+const useWorkflowEmulators = import.meta.env.DEV && import.meta.env.VITE_WORKFLOW_EMULATORS === "1";
+const firebaseConfig = useWorkflowEmulators ? {
+  apiKey: "demo-workflow",
+  authDomain: "localhost",
+  projectId: "demo-workflow",
+  storageBucket: "demo-workflow.appspot.com",
+  appId: "demo-workflow",
+} : {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
@@ -22,3 +29,11 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const functions = getFunctions(app, "asia-southeast1");
 export const storage = getStorage(app);
+
+// The explicit dev-only switch isolates workflow QA from the real Firebase project.
+if (useWorkflowEmulators) {
+  connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+  connectFirestoreEmulator(db, "127.0.0.1", 8080);
+  connectFunctionsEmulator(functions, "127.0.0.1", 5001);
+  connectStorageEmulator(storage, "127.0.0.1", 9199);
+}

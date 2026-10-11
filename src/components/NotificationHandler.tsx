@@ -13,6 +13,8 @@ export const NotificationHandler: React.FC = () => {
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
+    // Firebase Messaging has no local emulator. Keep synthetic QA offline.
+    if (import.meta.env.DEV && import.meta.env.VITE_WORKFLOW_EMULATORS === "1") return;
     // Allow ANY logged-in user to register for notifications
     if (currentUser && "Notification" in window) {
       const messaging = getMessaging();

@@ -29,3 +29,8 @@ dist-ssr
 # tmp files and private docs
 .tmp/
 docs/
+
+tests/
+.agent/
+AGENTS.md
+__pycache__/

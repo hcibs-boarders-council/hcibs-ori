@@ -27,14 +27,21 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useAuth } from "../context/AuthContext";
 
 export const HomePage: FC = () => {
   const theme = useTheme();
+  const { currentUser } = useAuth();
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
   useEffect(() => {
+    if (!currentUser) {
+      setAnnouncements([]);
+      setPage(1);
+      return;
+    }
     // Fetch ALL guest announcements without server-side ordering to prevent index bugs
     const q = query(
       collection(db, "announcements"),
@@ -57,7 +64,7 @@ export const HomePage: FC = () => {
       setAnnouncements(docs);
     });
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
 
   const handlePageChange = (
     _event: React.ChangeEvent<unknown>,
@@ -437,8 +444,8 @@ export const HomePage: FC = () => {
         </Container>
       </Box>
 
-      {/* --- SECTION 3.5: GUEST ANNOUNCEMENTS (MOVED HERE) --- */}
-      <Box sx={{ py: 8, bgcolor: "#fff8e1" }}>
+      {/* Announcements require a signed-in account under the existing rules. */}
+      {currentUser && <Box sx={{ py: 8, bgcolor: "#fff8e1" }}>
         <Container maxWidth="md">
           <Typography
             variant="h4"
@@ -527,6 +534,8 @@ export const HomePage: FC = () => {
           )}
         </Container>
       </Box>
+
+      }
 
       {/* --- SECTION 4: RESOURCES --- */}
       <Box sx={{ py: 8, textAlign: "center" }}>
